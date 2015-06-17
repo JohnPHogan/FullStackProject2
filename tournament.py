@@ -8,12 +8,16 @@ import psycopg2
 
 class tournament():
 
-    # Create a connection to the tournament database
-    def connect(self):
+    ''' create the connection to the database and the cursor when the class
+    is initialized.
+    '''
+    def __init__(self):
         self.conn = psycopg2.connect("dbname=tournament")
         self.cursor = self.conn.cursor()
-        return self.conn
 
+    ''' make sure to call this before ending program to make sure database
+    connection is properly closed.
+    '''
     def close(self):
         self.conn.close()
 
@@ -25,15 +29,20 @@ class tournament():
 
     # Delete the players from the database
     def deletePlayers(self):
-        """Remove all the player records from the database."""
+
+        # This is required to support foreign key in matches table.
+        self.deleteMatches()
+        '''Now that the possible constraint error is removed, delete rows of
+        data in the players table.
+        '''
         self.cursor.execute("DELETE FROM players;")
         self.conn.commit()
 
     # count the number of players in the database
     def countPlayers(self):
         """Returns the number of players currently registered."""
-        self.cursor.execute("select * from players;")
-        result = self.cursor.rowcount
+        self.cursor.execute("select count(id) as player_count from players;")
+        result = self.cursor.fetchone()[0]
         return result
 
     # register a player for a tournament
@@ -90,8 +99,9 @@ class tournament():
                     WHERE player_id = %s;'''
         self.cursor.execute(winner_sql, (winner,))
         loser_sql = '''UPDATE matches
+
                     SET matches = matches + 1,
-                    losses = losses + 1
+                    wins = wins + 0
                     WHERE player_id = %s;'''
         self.cursor.execute(loser_sql, (loser,))
         self.conn.commit()
@@ -111,16 +121,31 @@ class tournament():
             id2: the second player's unique id
             name2: the second player's name
         """
+        '''Query to get the following:
+            The ID of the record from the players table
+            The name of the player
+            The wins the player has earned so far from the matches table
+            The two tables are joined by player.ID = matches.player_id
+        '''
         pairing_sql = '''select p.id as id, p.p_name as name, m.wins as wins
                         from matches as m,
                         players as p where p.id = m.player_id
                         ORDER BY wins DESC'''
         self.cursor.execute(pairing_sql)
+
+        # This returns the players sorted in descending order based on wins.
         player_order = self.cursor.fetchall()
-        limit = self.cursor.rowcount
+
         player_pairing = []
         i = 0
 
+        ''' This loop will go through and read a row of data from the query.
+        The desired result is to pair two rows from the query into each single
+        set of data you want to return in the list.  The modulus function in
+        the IF Statement allows you to split the rows into the correct
+        information (player1 or player2).  When the player2 data is found,
+        player1 and player2 data is appended as a single entry to the list.
+        '''
         for row in player_order:
             if i % 2 == 0:
                 player1_id = row[0]
@@ -142,7 +167,6 @@ if __name__ == '__main__':
     import random
     tourn = tournament()
 
-    tourn.connect()
     tourn.deleteMatches()
     tourn.deletePlayers()
     tourn.registerPlayer("John Pertwee")
@@ -187,4 +211,3 @@ if __name__ == '__main__':
         print "Name %s Wins %d" % (row[1], row[2])
 
     tourn.close()
-    

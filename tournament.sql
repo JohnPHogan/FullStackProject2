@@ -6,19 +6,19 @@
 -- You can write comments in this file by starting them with two dashes, like
 -- these lines here.
 
--- You have to drop the view before you drop the tables it depends on
-DROP TABLE IF EXISTS players;
+-- CASCADE command on initial drop will make a notice print that the constraint
+-- on the foreign key in matches is dropped as well.  This should be expected.
+DROP TABLE IF EXISTS players CASCADE;
 CREATE TABLE players(
                     id SERIAL PRIMARY KEY,
                     p_name TEXT
 );
 
-
+--Feedback in the initial review was that making player_id the primary key
+--and also a foreign key to the table player's id data item could be done.  
 DROP TABLE IF EXISTS matches;
 CREATE TABLE matches(
-                    id SERIAL PRIMARY KEY,
-                    player_id INT,
-                    matches INT DEFAULT 0, 
-                    wins INT DEFAULT 0,
-                    losses INT DEFAULT 0
+                    player_id INT PRIMARY KEY REFERENCES players(id),
+                    matches INT DEFAULT 0,
+                    wins INT DEFAULT 0
 );

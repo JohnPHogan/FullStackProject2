@@ -5,20 +5,12 @@
 from tournament import tournament
 from unittest import *
 
+
+''' if the database does not exist, this will throw an error and can serve as
+a test case.
+'''
 tourn = tournament()
 
-
-# Test to make sure the database exists
-def testConnect():
-
-    try:
-        result = tourn.connect()
-    except Exception as e:
-        print "0. Error type %s occured" % type(e)
-        raise e
-        return
-
-    print "0. Created database Connection"
 
 def testDeleteMatches():
     tourn.deleteMatches()
@@ -54,33 +46,6 @@ def testRegister():
     print "4. After registering a player, countPlayers() returns 1."
 
 
-# Test to see if the players table exists
-def testPlayers():
-    result = tourn.execute("select * from players;")
-    if type(result) is not list:
-        raise ValueError("Did not get a valid list in return.")
-    print "2. Executed SQL for players table"
-
-'''
-# Test to see if the players table exists
-def testMatches():
-    result = tourn.execute("select * from matches;")
-    if type(result) is not list:
-        raise ValueError("Did not get a valid list in return.")
-    print "3. Executed SQL for matches table"
-
-
-
-def testDeletePlayers():
-    c = countPlayers()
-    if c == '0':
-        raise TypeError(
-            "countPlayers() should return numeric zero, not string '0'.")
-    if c != 0:
-        raise ValueError("After deleting, countPlayers should return zero.")
-    print "3. After deleting, countPlayers() returns zero."
-
-'''
 def testRegisterCountDelete():
     tourn.deleteMatches()
     tourn.deletePlayers()
@@ -92,6 +57,7 @@ def testRegisterCountDelete():
     if c != 4:
         raise ValueError("""After registering four players, countPlayers
                         should be 4.""")
+
     tourn.deletePlayers()
     c = tourn.countPlayers()
     if c != 0:
@@ -170,7 +136,6 @@ def testPairings():
 
 
 if __name__ == '__main__':
-    testConnect()
     testDeleteMatches()
     testDelete()
     testCount()
