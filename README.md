@@ -2,7 +2,7 @@ Full Stack Development Project 2
 
 This project assumes a postgres database that has already been configured with
 a database called tournament.  The tournament.sql file contains the SQL commands
-necessary to create the tables needed in order for the project to work.
+necessary to create the database and the tables needed in order for the project to work.
 
 From the command line, type in the following:
 
