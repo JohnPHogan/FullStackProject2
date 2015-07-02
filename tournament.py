@@ -24,7 +24,7 @@ class tournament():
     # Delete the matches in the database
     def deleteMatches(self):
         """Remove all the match records from the database."""
-        self.cursor.execute("DELETE FROM matches;")
+        self.cursor.execute("TRUNCATE matches;")
         self.conn.commit()
 
     # Delete the players from the database
@@ -32,10 +32,11 @@ class tournament():
 
         # This is required to support foreign key in matches table.
         self.deleteMatches()
-        '''Now that the possible constraint error is removed, delete rows of
-        data in the players table.
+        '''Now that the possible constraint error is removed, delete rows
+        of data in the players table.  You must include CASCADE clause
+        due to the foreign key dependencies.
         '''
-        self.cursor.execute("DELETE FROM players;")
+        self.cursor.execute("TRUNCATE players CASCADE;")
         self.conn.commit()
 
     # count the number of players in the database
@@ -55,23 +56,21 @@ class tournament():
         Args:
           name: the player's full name (need not be unique).
         """
-        sql_string = "INSERT INTO players (p_name) VALUES (%s) RETURNING ID;"
+        sql_string = "INSERT INTO players (p_name) VALUES (%s);"
         self.cursor.execute(sql_string, (name,))
-        # Get the newly created player_id
-        player_id = self.cursor.fetchone()[0]
-        '''match_query = "INSERT INTO matches (player_id) VALUES (%s);"
-        self.cursor.execute(match_query, (player_id,))'''
         self.conn.commit()
 
     # report player standings in the tournament
     def playerStandings(self):
-        """Returns a list of the players and their win records, sorted by wins.
+        """Returns a list of the players and their win records, sorted by
+        wins.
 
-        The first entry in the list should be the player in first place, or a
-        player tied for first place if there is currently a tie.
+        The first entry in the list should be the player in first place,
+        or a player tied for first place if there is currently a tie.
 
         Returns:
-          A list of tuples, each of which contains (id, name, wins, matches):
+          A list of tuples, each of which contains (id, name, wins,
+          matches):
             id: the player's unique id (assigned by the database)
             name: the player's full name (as registered)
             wins: the number of matches the player has won
@@ -90,19 +89,19 @@ class tournament():
           winner:  the id number of the player who won
           loser:  the id number of the player who lost
         """
-        
-        result_sql = '''INSERT INTO matches (player1, player2, winner)
-                        VALUES (%s, %s, %s);'''
-        self.cursor.execute(result_sql, (winner, loser, winner,))
+        result_sql = '''INSERT INTO matches (winner, loser)
+                        VALUES (%s, %s);'''
+        self.cursor.execute(result_sql, (winner, loser,))
         self.conn.commit()
 
     # generate the swiss pairings for a round
     def swissPairings(self):
-        """Returns a list of pairs of players for the next round of a match.
-        Assuming that there are an even number of players registered, each
-        player appears exactly once in the pairings.  Each player is paired
-        with another player with an equal or nearly-equal win record, that is,
-        a player adjacent to him or her in the standings.
+        """Returns a list of pairs of players for the next round of a
+        match.  Assuming that there are an even number of players
+        registered, each player appears exactly once in the pairings.
+        Each player is paired with another player with an equal or
+        nearly-equal win record, that is, a player adjacent to him or
+        her in the standings.
 
         Returns:
           A list of tuples, each of which contains (id1, name1, id2, name2)
@@ -112,24 +111,27 @@ class tournament():
             name2: the second player's name
         """
         '''Query to get the following:
-            The ID, name and wins from the player_record view.  The sort order
-            is defined in the player_record view logic.
+            The ID, name and wins from the player_record view.  The sort
+            order is defined in the player_record view logic.
         '''
         pairing_sql = '''select id, p_name, wins from player_record'''
         self.cursor.execute(pairing_sql)
 
-        # This returns the players sorted in descending order based on wins.
+        # This returns the players sorted in descending order by wins.
         player_order = self.cursor.fetchall()
 
+        # Disable spurious pylint warning on following line
+        # pylint: disable=unbalanced-tuple-unpacking
         player_pairing = []
         i = 0
 
-        ''' This loop will go through and read a row of data from the query.
-        The desired result is to pair two rows from the query into each single
-        set of data you want to return in the list.  The modulus function in
-        the IF Statement allows you to split the rows into the correct
-        information (player1 or player2).  When the player2 data is found,
-        player1 and player2 data is appended as a single entry to the list.
+        ''' This loop will go through and read a row of data from the
+        query.  The desired result is to pair two rows from the query
+        into each single set of data you want to return in the list.
+        The modulus function in the IF Statement allows you to split
+        the rows into the correct information (winner or player2).
+        When the player2 data is found, player1 and player2 data is
+        appended as a single entry to the list.
         '''
         for row in player_order:
             if i % 2 == 0:
@@ -146,13 +148,12 @@ class tournament():
             i += 1
         return player_pairing
 
-''' Code added to execute rounds of a tournament.  This was not part of the
-original requirements, but was just added to satisfy curiosity on whether or
-not you would be able to actually run the code.
+''' Code added to execute rounds of a tournament.  This was not part of
+the original requirements, but was just added to satisfy curiosity on
+whether or not you would be able to actually run the code.
 '''
 
 if __name__ == '__main__':
-    import random
     tourn = tournament()
 
     # Do the deletes to clear the tables
@@ -170,7 +171,7 @@ if __name__ == '__main__':
     rounds = 3
     # get a list of players with the default standings
     standings = tourn.playerStandings()
-    [id1, id2, id3, id4, id5, id6] = [row[0] for row in standings]
+    [id1, id2, id3, id4, id5, id6] = [data[0] for data in standings]
     # execute the first round
     tourn.reportMatch(id4, id1)
     tourn.reportMatch(id2, id5)
@@ -179,7 +180,8 @@ if __name__ == '__main__':
     counter = 1
     while (counter <= rounds):
         pairings = tourn.swissPairings()
-        # set the pairing for the round
+        # set the pairing for the round.  Disable spurious pylint warning
+        # pylint: disable=unbalanced-tuple-unpacking
         [(pid1, pname1, pid2, pname2),
          (pid3, pname3, pid4, pname4),
          (pid5, pname5, pid6, pname6)] = pairings
@@ -197,7 +199,7 @@ if __name__ == '__main__':
     standings = tourn.playerStandings()
 
     print "\n Final Standings"
-    for row in standings:
-        print "Name %s Wins %d" % (row[1], row[2])
+    for final_result in standings:
+        print "Name %s Wins %d" % (final_result[1], final_result[2])
 
     tourn.close()
