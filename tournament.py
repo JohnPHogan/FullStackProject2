@@ -59,8 +59,8 @@ class tournament():
         self.cursor.execute(sql_string, (name,))
         # Get the newly created player_id
         player_id = self.cursor.fetchone()[0]
-        match_query = "INSERT INTO matches (player_id) VALUES (%s);"
-        self.cursor.execute(match_query, (player_id,))
+        '''match_query = "INSERT INTO matches (player_id) VALUES (%s);"
+        self.cursor.execute(match_query, (player_id,))'''
         self.conn.commit()
 
     # report player standings in the tournament
@@ -77,10 +77,8 @@ class tournament():
             wins: the number of matches the player has won
             matches: the number of matches the player has played
         """
-        sql_string = '''select p.id, p.p_name, m.wins, m.matches
-                        from matches as m,
-                        players as p where p.id = m.player_id
-                        ORDER BY m.wins DESC'''
+        sql_string = '''select id, p_name, wins, matches_played from
+                        player_record'''
         self.cursor.execute(sql_string)
         return self.cursor.fetchall()
 
@@ -92,18 +90,10 @@ class tournament():
           winner:  the id number of the player who won
           loser:  the id number of the player who lost
         """
-        winner_sql = '''UPDATE matches
-
-                    SET matches = matches + 1,
-                    wins = wins + 1
-                    WHERE player_id = %s;'''
-        self.cursor.execute(winner_sql, (winner,))
-        loser_sql = '''UPDATE matches
-
-                    SET matches = matches + 1,
-                    wins = wins + 0
-                    WHERE player_id = %s;'''
-        self.cursor.execute(loser_sql, (loser,))
+        
+        result_sql = '''INSERT INTO matches (player1, player2, winner)
+                        VALUES (%s, %s, %s);'''
+        self.cursor.execute(result_sql, (winner, loser, winner,))
         self.conn.commit()
 
     # generate the swiss pairings for a round
@@ -122,15 +112,10 @@ class tournament():
             name2: the second player's name
         """
         '''Query to get the following:
-            The ID of the record from the players table
-            The name of the player
-            The wins the player has earned so far from the matches table
-            The two tables are joined by player.ID = matches.player_id
+            The ID, name and wins from the player_record view.  The sort order
+            is defined in the player_record view logic.
         '''
-        pairing_sql = '''select p.id as id, p.p_name as name, m.wins as wins
-                        from matches as m,
-                        players as p where p.id = m.player_id
-                        ORDER BY wins DESC'''
+        pairing_sql = '''select id, p_name, wins from player_record'''
         self.cursor.execute(pairing_sql)
 
         # This returns the players sorted in descending order based on wins.
@@ -161,14 +146,19 @@ class tournament():
             i += 1
         return player_pairing
 
-# Code added to execute rounds of a tournament
+''' Code added to execute rounds of a tournament.  This was not part of the
+original requirements, but was just added to satisfy curiosity on whether or
+not you would be able to actually run the code.
+'''
 
 if __name__ == '__main__':
     import random
     tourn = tournament()
 
+    # Do the deletes to clear the tables
     tourn.deleteMatches()
     tourn.deletePlayers()
+    # add a group of players
     tourn.registerPlayer("John Pertwee")
     tourn.registerPlayer("Peter Davidson")
     tourn.registerPlayer("Tom Baker")
@@ -181,7 +171,7 @@ if __name__ == '__main__':
     # get a list of players with the default standings
     standings = tourn.playerStandings()
     [id1, id2, id3, id4, id5, id6] = [row[0] for row in standings]
-
+    # execute the first round
     tourn.reportMatch(id4, id1)
     tourn.reportMatch(id2, id5)
     tourn.reportMatch(id3, id6)
@@ -189,7 +179,7 @@ if __name__ == '__main__':
     counter = 1
     while (counter <= rounds):
         pairings = tourn.swissPairings()
-
+        # set the pairing for the round
         [(pid1, pname1, pid2, pname2),
          (pid3, pname3, pid4, pname4),
          (pid5, pname5, pid6, pname6)] = pairings
